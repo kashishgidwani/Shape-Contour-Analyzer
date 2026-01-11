@@ -2,7 +2,7 @@
 
 A minimal interactive dashboard using **Streamlit** and **OpenCV** to detect, classify, and measure shapes in images.
 
-## 🚀 How to Run
+## How to Run
 
 1.  **Install Dependencies** (if not already installed):
     ```bash
@@ -15,7 +15,7 @@ A minimal interactive dashboard using **Streamlit** and **OpenCV** to detect, cl
 3.  **Open in Browser**:
     The app will usually open automatically at `http://localhost:8501`.
 
-## 🎛️ Features
+## Features
 ### Dashboard
 1.  **Upload Image**: Supports JPG, PNG.
 2.  **Original vs Processed**: Compare the raw input with the detected contours.
@@ -25,7 +25,7 @@ A minimal interactive dashboard using **Streamlit** and **OpenCV** to detect, cl
     *   **Perimeter (px)**
 
 
-## 🛠️ Tech Stack
+## Tech Stack
 *   **Python**: Core Logic
 *   **Streamlit**: UI / Frontend
 *   **OpenCV**: Image Processing
