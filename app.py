@@ -14,37 +14,115 @@ def get_centroid(contour):
         cX, cY = 0, 0
     return cX, cY
 
+def calculate_circularity(contour):
+    """
+    Calculate circularity using the standard formula:
+    Circularity = (4 * pi * Area) / (Perimeter^2)
+    Returns: circularity (float) - 1.0 for perfect circle, lower for polygons
+    """
+    area = cv2.contourArea(contour)
+    peri = cv2.arcLength(contour, True)
+    
+    if peri == 0:
+        return 0.0
+    
+    circularity = (4 * np.pi * area) / (peri ** 2)
+    return circularity
+
+def analyze_distance_from_center(contour):
+    """
+    Analyze distance from center to distinguish circles from polygons.
+    For circles, all points are roughly equidistant from center.
+    For polygons, corner points are farther than edge midpoints.
+    Returns: distance_variance (float) - lower for circles, higher for polygons
+    """
+    M = cv2.moments(contour)
+    if M["m00"] == 0:
+        return float('inf')
+    
+    cX = M["m10"] / M["m00"]
+    cY = M["m01"] / M["m00"]
+    
+    distances = []
+    for point in contour:
+        x, y = point[0]
+        dist = np.sqrt((x - cX)**2 + (y - cY)**2)
+        distances.append(dist)
+    
+    if len(distances) == 0:
+        return float('inf')
+    
+    mean_dist = np.mean(distances)
+    if mean_dist == 0:
+        return float('inf')
+    
+    # Coefficient of variation - lower for circles (more uniform distances)
+    cv = np.std(distances) / mean_dist
+    return cv
+
 def detect_shape(contour):
     """
-    Classify the shape of a contour based on vertex count and geometry.
+    Classify the shape of a contour using multiple methods:
+    1. approxPolyDP to count vertices
+    2. Circularity formula: (4 * pi * Area) / (Perimeter^2)
+    3. Distance from center analysis
+    4. minEnclosingCircle area comparison
     Returns: shape_name (str)
     """
     shape = "unidentified"
     peri = cv2.arcLength(contour, True)
-    # Approximate the contour
+    area = cv2.contourArea(contour)
+    
+    # Approximate polygon with 1-4% of perimeter precision
     approx = cv2.approxPolyDP(contour, 0.03 * peri, True)
+    num_vertices = len(approx)
+    
+    # Calculate circularity using standard formula
+    circularity = calculate_circularity(contour)
+    
+    # Analyze distance from center
+    dist_cv = analyze_distance_from_center(contour)
+    
+    # Compare with minEnclosingCircle
+    enclosing_circle_ratio = 0.0
+    if area > 0:
+        ((x, y), radius) = cv2.minEnclosingCircle(contour)
+        circle_area = np.pi * (radius ** 2)
+        enclosing_circle_ratio = area / circle_area
 
     # Classification Logic
-    if len(approx) == 3:
+    if num_vertices == 3:
         shape = "Triangle"
-    elif len(approx) == 4:
+    elif num_vertices == 4:
         (x, y, w, h) = cv2.boundingRect(approx)
         ar = w / float(h)
         # Check Aspect Ratio for Square vs Rectangle
         shape = "Square" if 0.95 <= ar <= 1.05 else "Rectangle"
+    elif num_vertices >= 5 and num_vertices <= 8:
+        # For 5-8 vertices, check if it's actually a circle
+        # Circles have: high circularity (>0.85), low distance variance (<0.15), 
+        # high enclosing circle ratio (>0.85), and many vertices when approximated
+        is_circle = (circularity > 0.85 and 
+                    dist_cv < 0.15 and 
+                    enclosing_circle_ratio > 0.85)
+        
+        if is_circle:
+            shape = "Circle"
+        else:
+            # Specific polygon names
+            polygon_names = {5: "Pentagon", 6: "Hexagon", 7: "Heptagon", 8: "Octagon"}
+            shape = polygon_names.get(num_vertices, "Polygon")
     else:
-        # > 4 vertices: Check Circularity
-        area = cv2.contourArea(contour)
-        if area > 0:
-            ((x, y), radius) = cv2.minEnclosingCircle(contour)
-            circle_area = np.pi * (radius ** 2)
-            circularity = area / circle_area
-            
-            # If high circularity -> Circle, else Polygon
-            if circularity > 0.82: # Using 0.82 as threshold for better robustness
-                shape = "Circle"
-            else:
-                shape = "Polygon"
+        # For many vertices (typically 8+), likely a circle or complex polygon
+        # Use combined metrics: high circularity + low distance variance = circle
+        is_circle = (circularity > 0.85 and 
+                    dist_cv < 0.15 and 
+                    enclosing_circle_ratio > 0.85)
+        
+        if is_circle:
+            shape = "Circle"
+        elif num_vertices > 8:
+            shape = f"Polygon ({num_vertices} sides)"
         else:
             shape = "Polygon"
             
