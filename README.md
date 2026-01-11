@@ -24,13 +24,6 @@ A minimal interactive dashboard using **Streamlit** and **OpenCV** to detect, cl
     *   **Area (px)**
     *   **Perimeter (px)**
 
-## 🧪 Test Images
-The project includes generated test images:
-*   `test_image_1.png`: Basic verification (Triangle, Square, Circle).
-*   `test_image_2.png`: High contrast colorful shapes.
-*   `test_image_3.png`: Triangles and irregular polygons.
-*   `test_image_4.png`: Dark shapes on dark background (good for testing sensitivity).
-*   `test_image_5.png`: Stars, L-shapes, and rotated rectangles.
 
 ## 🛠️ Tech Stack
 *   **Python**: Core Logic
